@@ -26,7 +26,6 @@ The game contains three mechanically distinct levels:
 - [Game Assets](#game-assets)
 - [Development Notes](#development-notes)
 - [Extending the Project](#extending-the-project)
-- [License and Distribution](#license-and-distribution)
 
 ---
 
