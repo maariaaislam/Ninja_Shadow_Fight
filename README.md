@@ -490,14 +490,3 @@ Use the existing responsibility boundaries when adding features:
 - Verify progress saving and level unlocking after a successful run.
 - Run from a clean working directory to detect missing resource paths.
 
----
-
-## License and Distribution
-
-No explicit software license is included in the supplied project archive. Unless a license is added by the project owner, the source code and bundled resources should not be assumed to permit unrestricted redistribution or commercial use.
-
-Before publishing the repository, add an appropriate `LICENSE` file and complete the asset-attribution records.
-
----
-
-**Ninja Fight** demonstrates how multiple movement models, state machines, collision systems, combat rules, and progression features can be coordinated within a modular iGraphics project.
