@@ -147,7 +147,7 @@ The game uses two plain text files to store logic and progress:
 This project was built collaboratively, with team members owning specific aspects of the game mechanics, logic implementation, and rendering.
 
 * **Maria Islam (ID: 00725105101086)** 
-  * *Contributions: * Level-2 and Level-3: Hero Character Rendering, Movement Rendering & Map Architecture, Combat Execution Mechanics and Score Count & Progression Logic.
+  * Contributions: * Level-2 and Level-3: Hero Character Rendering, Movement Rendering & Map Architecture, Combat Execution Mechanics and Score Count &      Progression Logic.
 * **[Teammate 2 Name] (ID: [Teammate 2 ID])**
   * *Contributions:* [To be filled]
 
