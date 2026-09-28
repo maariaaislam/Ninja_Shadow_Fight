@@ -1,156 +1,137 @@
-# Ninja Fight
+# Ninja Fight: Where Shadows Collide
 
-**Ninja Fight** is a multi-level 2D action game developed in C++ using the iGraphics framework, GLUT/OpenGL rendering, and Win32 multimedia support. The project is designed as a set of cooperating systems coordinated by a central state machine. It seamlessly combines side-scrolling platforming mechanics, horizontal arena fighting logic, and top-down exploration/combat mechanics into a single event-driven architecture.
+A three-level 2D action game built in C++ with iGraphics for Windows. Each level has a different style of play: side-scrolling platforming, a three-phase arena duel, and top-down exploration followed by wave combat. Scores and stars are saved so players can continue unlocking levels.
 
-## Table of Contents
+**Course:** CSE 1200 — Software Development I  
+**Department:** Computer Science and Engineering, Ahsanullah University of Science and Technology (AUST)  
+**Repository:** [Ninja Shadow Fight](https://github.com/maariaaislam/Ninja_Shadow_Fight)
 
-* [Project Overview](#project-overview)
-* [Game and Code Progression Cycle](#game-and-code-progression-cycle)
-* [System Architecture & State Management](#system-architecture--state-management)
-* [Input Pipeline Logic](#input-pipeline-logic)
-* [Movement and Physics Mechanics](#movement-and-physics-mechanics)
-* [Combat and Collision Mechanics](#combat-and-collision-mechanics)
-* [AI Decision Logic](#ai-decision-logic)
-* [Controls](#controls)
-* [Project Structure](#project-structure)
-* [Build and Run](#build-and-run)
-* [Configuration and Save Data](#configuration-and-save-data)
-* [Team & Contributions](#team--contributions)
+## Features
 
-## Project Overview
+- Three levels with distinct movement, enemies, and objectives.
+- Home, Level Selection, Settings, and Scoreboard screens.
+- Remappable controls, audio settings, and saved progress.
+- Score and star ratings; earning at least one star unlocks the next level.
+- Animated combat, hazards, shuriken, health, and result screens.
 
-Ninja Fight operates on an event-driven callback loop executing at a fixed interval of roughly **30 milliseconds** (`updateTimer`) in a **1024 x 600** window. To optimize performance and maintain deterministic gameplay mechanics, the game creates long-lived system objects once at startup, resetting only the necessary logical components when a level begins rather than repeatedly allocating and destroying memory.
+## Levels
 
-The game features three distinct game mechanics and logic models:
+| Level | Gameplay | Goal |
+| --- | --- | --- |
+| **1 — Platformer** | Cross a scrolling world, avoid traps, collect gold, and fight Shadow enemies. | Reach the exit. |
+| **2 — Arena Duel** | Fight a villain through three increasingly difficult phases using attacks, block, shuriken, power, and limited healing. | Defeat Phase 3. |
+| **3 — Exploration and Arena** | Explore ten connected areas, solve three puzzles, and enter the portal for three combat waves. | Clear the final wave. |
 
-* **Level 1 (Side-scroller):** Platform mechanics featuring velocity-based physics, jump buffering, coyote time, traps, collectibles, shadow enemies, and dynamic camera tracking logic.
-* **Level 2 (Arena Fighter):** A one-on-one fighting mechanic with jump physics, timed attack releases, dodge/block mechanics, power modes, healing, and a deterministic timer-driven AI logic that scales across three phases.
-* **Level 3 (Exploration & Wave Combat):** A ten-map top-down exploration graph utilizing foot-based, single-pixel substep collision mechanics. Solving three map puzzles triggers the logic to open a portal to a four-directional, multi-wave arena battle.
+## Requirements
 
-## Game and Code Progression Cycle
+- Windows PC.
+- A C++ compiler and the project's compatible **iGraphics/GLUT, OpenGL, GLU, and Win32 multimedia** dependencies.
+- Game images and other assets in their original project folders.
+- VS Code with the Microsoft C/C++ extension if building from VS Code.
 
-The core of Ninja Fight relies on a strict, unidirectional progression cycle for both gameplay mechanics and code execution. 
+> The original `.sln`/`.vcxproj` targets Visual Studio 2013 **Win32**. VS Code can edit and launch the project, but it needs a separate compiler and libraries. The solution file itself is not a G++ build command. Match the architecture and library format to the compiler you use.
 
-### Gameplay Progression Cycle
-1. **Active Play:** The player navigates the level mechanics, overcoming AI logic and environmental hazards.
-2. **Completion Trigger:** Reaching an exit (Level 1), depleting phase HP (Level 2), or clearing all waves (Level 3) triggers the end-stage logic.
-3. **Result Calculation:** The game mechanics compile the final score based on base points, remaining HP, unused heals, and clear-time bonuses.
-4. **Data Handoff:** The result is submitted to `Scoreboard.h`, which handles the file I/O logic to write to `level_progress.txt`.
-5. **UI Synchronization:** `iMain.cpp` commands the Level Select UI to read the new data, updating the visual rendering logic for locks and earned stars.
+## Build and Run in VS Code
 
-### Code Execution Progression Cycle (Safe Feature-Addition)
-When adding new mechanics or logic to the codebase, the framework follows this strict lifecycle:
-`Define Data/State` ➔ `Load Assets Once` ➔ `Reset Deterministic Values` ➔ `Consume Input Logic` ➔ `Update Simulation Mechanics` ➔ `Draw from State` ➔ `Submit Result` ➔ `Sync Presentation`.
+1. Open the folder containing `Ninja_Fight.sln` in VS Code and trust the workspace.
+2. Keep `Ninja_Fight/iMain.cpp`, its headers, iGraphics files, and asset folders together in their original layout.
+3. Install a **32-bit MinGW G++** toolchain and compatible 32-bit iGraphics/GLUT libraries. In the VS Code terminal, check `g++ --version`.
+4. Place the project's MinGW `.vscode/tasks.json` in the folder containing `Ninja_Fight.sln`.
+5. Choose **Terminal → Run Task → Run Ninja Fight (MinGW)**. The task compiles `iMain.cpp` and starts the game.
 
-## System Architecture & State Management
-
-The entire game logic operates as a top-level finite-state machine coordinated by `iMain.cpp`. This ensures that only one major system's mechanics are evaluated during the update loop.
-
-### Game State Logic (`gameState`)
-
-| State | Purpose & Exits | 
-| ----- | ----- | 
-| `STATE_LOADING (-1)` | Displays the loading screen. Exits to Home when the timer maximizes. | 
-| `STATE_HOME (0)` | Main menu with animated staged buttons. | 
-| `STATE_LEVEL_SELECT (1)` | Displays unlocked levels, stars, and hover text logic. | 
-| `STATE_LEVEL1 (2)` | Runs the side-scrolling platformer mechanics. Submits result on exit overlap. | 
-| `STATE_SCOREBOARD (3)` | Reads `level_progress.txt` to display best scores. | 
-| `STATE_SETTINGS (4)` | Manages audio, remappable controls, and settings logic. | 
-| `STATE_LEVEL2 (5)` | Runs the three-phase 1v1 arena fighter mechanics. | 
-| `STATE_LEVEL3 (6)` | Runs the top-down exploration and 4-way arena combat logic. | 
-
-## Input Pipeline Logic
-
-To handle both smooth movement and precise combat mechanics, `InputState` strictly separates raw keyboard events to prevent logic bugs:
-
-1. **Held Inputs:** Used for continuous mechanics like movement and blocking. These remain true every frame the key is physically pressed down, allowing for smooth, continuous physics logic.
-2. **Pressed-Edge Inputs:** Used for jumping, dashing, healing, and attacking mechanics. These create a one-frame logic flag on the transition from key-up to key-down, which is cleared at the end of the active level's update. This guarantees one physical button press equals exactly one mechanical action.
-
-## Movement and Physics Mechanics
-
-Because the game features three distinct genres, it employs three separate mathematical movement mechanics.
-
-### Level 1: Side-Scrolling Platformer
-* **Physics & Camera Logic:** Movement relies on velocity-based physics. The physics engine operates in "world coordinates," while the rendering logic subtracts the camera's X position to translate this to the screen.
-* **Collision Mechanics:** Vertical collision uses discrete `PlatformLine` objects. The logic checks if the player's previous and new Y positions cross a platform's height while falling; if so, Y velocity is zeroed.
-* **Responsiveness Mechanics:** Implements **jump buffering** (queueing a jump input) and **coyote time** (allowing a jump shortly after walking off a ledge).
-
-### Level 2: Horizontal Arena Fighter
-* **1D Combat Plane Logic:** The physics mechanics are restricted to a horizontal plane with Y reserved exclusively for jumps and knockbacks.
-* **Friction Mechanics:** Ground movement applies constant acceleration, but releasing the input immediately triggers a logic block that applies a heavy friction multiplier ($0.62$) to prevent sliding.
-
-### Level 3: Top-Down Exploration & Combat
-* **Diagonal Normalization Logic:** To prevent moving diagonally from breaking speed mechanics, diagonal inputs multiply both axes by $0.7071$.
-* **Anti-Tunneling Substep Mechanics:** Movement vectors are broken down into substeps no larger than **one pixel** to ensure perfect collision logic.
-* **Foot-Based Collision Logic:** A five-point "foot footprint" is tested against walk-zone and block-zone rectangles; the simulation stops the player at the exact pixel before an invalid region.
-
-## Combat and Collision Mechanics
-
-Visual rendering logic is deliberately decoupled from physical collision mechanics to prevent erratic damage application.
-
-* **Hit Tick Logic:** An attack animation does not immediately deal damage. The state machine logic waits for a specific `stateTimer` tick that perfectly aligns with the visible impact frame.
-* **One-Hit Lock Mechanics:** Once an attack registers its hit tick, an `attackHitDone` boolean flag is set to ensure the same attack state cannot trigger a second hit logic loop.
-* **Directional Melee Corridors:** Level 3 attack mechanics project a rectangular directional corridor. The logic scans all living enemies within this corridor and applies damage only to the nearest target.
-* **Object Pooling Mechanics:** Projectiles and effects are managed via fixed-size arrays, avoiding expensive runtime memory allocation logic.
-
-## AI Decision Logic
-
-Enemy mechanics are driven by timer-based, deterministic decision loops rather than complex behavioral trees.
-
-* **Distance Evaluation Logic:** If the player is outside an attack threshold, the enemy mechanics dictate a chase using a normalized directional vector. Once inside, the AI checks its cooldown timers to select an action.
-* **Phase Scaling Mechanics (Level 2):** The logic engine dynamically alters the villain's maximum HP (320 -> 760), base movement speed, damage reduction multiplier, and move-selection probability.
-* **Entity Separation Logic (Level 3):** To prevent multiple AI enemies from stacking, the controller logic evaluates the center distance between every active enemy pair. If closer than **70 pixels**, the mechanics push them apart symmetrically.
+The game must start with its working directory set to the inner `Ninja_Fight` project folder so relative image, settings, and progress paths resolve. If the build reports a missing header or library, update the include/library paths in `tasks.json` to match the installed iGraphics package. The task requires MinGW-compatible library files; a Visual Studio-only `.lib` may not work with G++.
 
 ## Controls
 
-Controls can be remapped via the Settings logic.
+Controls can be changed on the **Settings** screen. The actions available depend on the current level.
 
-| Action | Level 1 (Platformer) | Level 2 & 3 (Combat) | 
-| ----- | ----- | ----- | 
-| **Move** | A/D or Arrows | A/D/W/S or Arrows | 
-| **Jump** | W / Up / Space | W / Up / Space (L2 only) | 
-| **Melee / Punch** | \- | J / Left Mouse | 
-| **Kick** | \- | K / Right Mouse | 
-| **Heavy Attack** | \- | F | 
-| **Throw Shuriken** | J, K, L, I or 1-4 | L / Middle Mouse (L3) / J (L2) | 
-| **Dash** | E | E | 
-| **Block / Defense** | S (Crouch/Fast Fall) | Hold Q | 
-| **Power Mode** | \- | P | 
-| **Heal** | \- | H | 
+| Action | Level 1 | Level 2 | Level 3 |
+| --- | --- | --- | --- |
+| Move | Left/right; sprint and crouch | Left/right; jump | Four directions |
+| Attack | Four shuriken choices (`1`–`4`) | Punch, kick, heavy strike, shuriken | Directional melee and shuriken |
+| Defense and abilities | Dash | Block, dash, power, heal | Block, dash, power, heal in the arena |
+| Menus | `Esc` returns to Level Selection | `Esc` returns to Level Selection | `Esc` returns to Level Selection |
+
+For the current key bindings, use **Settings → Controls** in the game. Mouse buttons can also trigger attacks in the combat levels.
+
+## Screenshots
+
+The screenshots below are taken from the project report.
+
+### Level Selection and Scoreboard
+
+![Three level cards with stars](screenshots/level-selection.jpg)
+
+*Select an unlocked level and review its stars.*
+
+![Saved best score and stars](screenshots/scoreboard.jpg)
+
+*The scoreboard keeps the best result.*
+
+### Level 1: Platformer
+
+![Ninja fighting an enemy among platforms and gold](screenshots/level-1-platformer.jpg)
+
+*Cross platforms, collect gold, and avoid hazards.*
+
+### Level 2: Arena Duel
+
+![Hero and villain fighting in the side-view arena](screenshots/level-2-duel.jpg)
+
+*The hero faces the villain in a three-phase fight.*
+
+### Level 3: Exploration and Arena
+
+![Top-down Entrance Courtyard map](screenshots/level-3-exploration.jpg)
+
+*Explore connected maps and solve puzzles.*
+
+![Portal activated in the Crescent Courtyard](screenshots/level-3-portal.jpg)
+
+*The portal opens after all three seals are solved.*
+
+![Directional combat in the Level 3 arena](screenshots/level-3-arena.jpg)
+
+*Clear three escalating enemy waves.*
 
 ## Project Structure
 
-* **`iMain.cpp`**: Runtime entry point, input normalization logic, and global FSM manager.
-* **`Gameplay.h`**: Shared physics mechanics, `NinjaPlayer` state machine, `Camera2D`.
-* **`Level*.h`**: Distinct gameplay mechanics, stage logic, and AI controllers.
-* **`Scoreboard.h` / `Settings.h`**: Persistence logic models for text file I/O.
-* **`New.h` / `Screens.h`**: UI presentation and rendering logic.
-* **`Images/`**: 305 image files sorted by gameplay role, using a load-once, select-by-ID rendering logic.
+| File or folder | Responsibility |
+| --- | --- |
+| `Ninja_Fight.sln`, `Ninja_Fight/Ninja_Fight.vcxproj` | Original Windows project configuration. |
+| `Ninja_Fight/iMain.cpp` | Startup, game-state transitions, input callbacks, update loop, and result handoff. |
+| `Ninja_Fight/Screens.h`, `Ninja_Fight/New.h` | Loading/Home screens and Level Selection. |
+| `Ninja_Fight/Gameplay.h`, `Ninja_Fight/Level1.h` | Shared ninja movement, camera, shuriken, and Level 1. |
+| `Ninja_Fight/Level2.h`, `Ninja_Fight/Level3.h` | Arena duel, exploration, puzzles, and wave combat. |
+| `Ninja_Fight/Settings.h`, `Ninja_Fight/Scoreboard.h` | Controls/audio settings and saved scores/progression. |
+| `Ninja_Fight/Music.h` | Music and volume handling. |
+| Image and audio folders | Assets loaded by the game; preserve their relative paths. |
 
-## Build and Run
+The update timer runs about every **30 ms**. `iMain.cpp` updates and draws only the active menu or level. On completion, the level submits its result to the scoreboard, which saves improved records and refreshes unlocked levels and stars.
 
-1. Open `Ninja_Fight.sln` in Visual Studio (Targets Win32 / x86).
-2. The project relies on legacy Win32 graphics (OpenGL, GLU, GLUT, GLAUX). Ensure `GLUT32.DLL` is available.
-3. Ensure your Platform Toolset is compatible (retarget from `v120` if necessary).
-4. **CRITICAL:** Set the Visual Studio Debugging Working Directory to `$(ProjectDir)` so the rendering logic can resolve relative paths.
-5. **Audio Mechanics:** Add supported tracks to the `Music/` folder and configure `MUSIC_*_PATH` macros in `Music.h`.
+## Save Files
 
-## Configuration and Save Data
+- `game_settings.txt` — audio settings and remapped controls.
+- `level_progress.txt` — best scores, stars, gold, and unlocked levels.
 
-The game uses two plain text files to store logic and progress:
+These files are created or updated relative to the game's working directory. Keep them if you want to preserve progress.
 
-* **`game_settings.txt`**: Saves audio toggles, master volume, and remapped key codes.
-* **`level_progress.txt`**: Saves best scores, stars, gold collected, and level unlock status.
+## Team
 
-## Team & Contributions
+| Member | Student ID |
+| --- | --- |
+| Shanzida Sultana | 00725105101071 |
+| Maria Islam | 00725105101086 |
+| Siam Hossain Rafi | 00725105101087 |
 
-This project was built collaboratively, with team members owning specific aspects of the game mechanics, logic implementation, and rendering.
+The team developed and integrated the game's interface, level mechanics, assets, progression, and documentation. Individual work can be reviewed through the repository's commit history.
 
-* **Maria Islam (ID: 00725105101086)** 
-  * Contributions:  Level-2 and Level-3: Hero Character Rendering, Movement Rendering & Map Architecture, Combat Execution Mechanics and Score Count &      Progression Logic.
-* **[Teammate 2 Name] (ID: [Teammate 2 ID])**
-  * *Contributions:* [To be filled]
+## Known Limitations and Future Work
 
-* **[Teammate 3 Name] (ID: [Teammate 3 ID])**
-  * *Contributions:* [To be filled]
+- Audible music requires valid audio tracks and paths configured in `Music.h`.
+- Developer shortcuts for map jumps and level selection should be disabled for a release build.
+- Further playtesting and checks for map exits, collisions, and difficulty would improve the game.
 
+## License
+
+No license is specified in the supplied project material. Contact the project team before reusing its code or assets.
