@@ -1,4 +1,4 @@
-# Ninja Fight: Where Shadows Collide
+# Ninja Shadow Fight: Where Shadows Collide
 
 A three-level 2D action game built in C++ with iGraphics for Windows. Each level has a different style of play: side-scrolling platforming, a three-phase arena duel, and top-down exploration followed by wave combat. Scores and stars are saved so players can continue unlocking levels.
 
